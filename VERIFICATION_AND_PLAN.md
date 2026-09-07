@@ -2,6 +2,15 @@
 **Date:** 2026-09-07 · **Data:** `CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx` (sheets: README, Training_Data 1000×11, Test_Data 350×9, Sample_Submission 350×3)
 **Team name:** pentupbois · All numbers below re-derived from the actual workbook this session.
 
+> **Status note (final):** This is the *early-phase* verification and planning
+> document (2026-09-07). Parts C–D record the initial recommendations made
+> before the full model bake-off ran; the final deployed choices — the
+> probability-mean four-model ensemble for Task 1 and the physics-informed
+> hybrid for Task 2 — supersede them and are documented in
+> `METHODOLOGY_NOTE.md` with evidence in `results/`. The Part A–B verification
+> findings remain fully valid. Task 3's attention rule (Part E) was resolved:
+> highest predicted Reference among least-confident Valid rows.
+
 ---
 
 ## PART A — Verification of Section 2 Claims
