@@ -262,10 +262,24 @@ most tree-based competitor solutions will fail there silently.
 
 ```
 powernext/
-├── pentupbois-submission.zip        ★ THE SUBMISSION — the only file to upload.
-│                                      Contains all 4 required deliverables:
-│                                      prediction CSV, summary.json, source
-│                                      code, methodology note (+ evidence).
+├── pentupbois-submission.zip        ★ THE SUBMISSION — the exact zip uploaded.
+│                                      Exactly 4 files, nothing extra.
+│
+├── pentupbois-submission/            The submitted package, unpacked (identical
+│   │                                  to the zip contents):
+│   ├── pentupbois.csv                Deliverable 1: 350 rows, header
+│   │                                  [Test_ID, Predicted_Reference_Parameter,
+│   │                                  Validity_Label], Sample_Submission order.
+│   ├── summary.json                  Deliverable 2: Task 3 auto-summary (counts,
+│   │                                  min/max/avg, 3 attention IDs, ≤100-word
+│   │                                  blurb, CV metrics, uncertainty, drift).
+│   ├── METHODOLOGY_NOTE.md           Deliverable 4 (≤2 pages): approach, model
+│   │                                  selection, stress tests, parameters,
+│   │                                  abnormal-data method, assumptions,
+│   │                                  digital-twin automation steps.
+│   └── src/pipeline.py               Deliverable 3: the complete program.
+│
+├── README.md                         GitHub front page.
 │
 ├── CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx
 │                                    The organizers' input data (read-only).
@@ -273,25 +287,14 @@ powernext/
 │                                      Test_Data (350), Sample_Submission.
 │                                      Required next to src/ to rerun.
 │
-├── METHODOLOGY_NOTE.md              Deliverable 4 (≤2 pages): approach, model
-│                                      selection, stress tests, parameters,
-│                                      abnormal-data method, assumptions,
-│                                      digital-twin automation steps.
-│
-├── VERIFICATION_AND_PLAN.md         Internal: claim-by-claim verification of
-│                                      the original handoff document + the
-│                                      step-by-step build plan that was
-│                                      executed.
-│
-├── src/
+├── src/                              Working copies of the code (pipeline.py
+│   │                                  is identical to the submitted one):
 │   ├── pipeline.py                  ★ THE PROGRAM (Deliverable 3). One command:
 │   │                                  python src/pipeline.py
 │   │                                  Loads xlsx → Task 1 ensemble → Task 2
 │   │                                  hybrid → honest CV for both → writes
-│   │                                  submission/pentupbois.csv (exact
-│   │                                  required format) + summary.json with
-│   │                                  drift check, uncertainty band, noise-
-│   │                                  floor diagnostic. Deterministic (seed 42).
+│   │                                  submission/pentupbois.csv + summary.json
+│   │                                  (build output, gitignored).
 │   ├── bakeoff.py                   Round-1 model comparison: 17 candidates
 │   │                                  per task, identical folds, leakage-free.
 │   ├── bakeoff2.py                  Round-2: ensembles, seed-bags, depth
@@ -300,24 +303,19 @@ powernext/
 │                                      cited in the methodology note into
 │                                      results/stress_tests.txt.
 │
-├── submission/
-│   ├── pentupbois.csv               Deliverable 1: 350 rows, header
-│   │                                  [Test_ID, Predicted_Reference_Parameter,
-│   │                                  Validity_Label], Sample_Submission order.
-│   ├── summary.json                 Deliverable 2: Task 3 auto-summary (counts,
-│   │                                  min/max/avg, 3 attention IDs, 70-word
-│   │                                  blurb, CV metrics, uncertainty, drift).
-│   └── README.md                    How to reproduce the submission.
-│
 ├── results/                         Evidence tables backing every model choice:
 │   ├── bakeoff_task1.csv / bakeoff_task2.csv / bakeoff.json   (round-1 results)
 │   ├── bakeoff2_task1.csv / bakeoff2_task2.csv / bakeoff2.json (round-2 results)
 │   ├── bakeoff_console.txt          Console log of the bake-off run.
 │   └── stress_tests.txt             Regenerated stress-test evidence (§5).
 │
-└── archive/
-    └── PowerNext-AI_Handoff.md      The original prompt/handoff document
-                                       (kept for reference; not a deliverable).
+├── PROJECT_DEEP_ANALYSIS.md         Full reasoning, trap analysis, QA log and
+│                                      assessment (the shareable deep-dive).
+│
+└── archive/                         Internal / historical documents, not
+    ├── PowerNext-AI_Handoff.md        deliverables: the original prompt
+    └── VERIFICATION_AND_PLAN.md       handoff and the early-phase
+                                       verification + build plan.
 ```
 
 **To reproduce everything from scratch:** place the xlsx next to `src/`, run

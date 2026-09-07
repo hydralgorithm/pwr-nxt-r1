@@ -1,8 +1,8 @@
 """
 PowerNext-AI — CPRI Black-Box Test Bench Challenge: production pipeline.
 
-Winning architecture (selected by repeated 5x3-fold cross-validation bake-off,
-see results/bakeoff*.csv):
+Winning architecture (selected by a 17-candidate bake-off under repeated
+5x3-fold cross-validation, identical folds for every candidate):
 
   Task 1  Valid/Invalid: probability-mean ensemble of
           RandomForest + SVM-RBF + LightGBM + CatBoost on engineered
