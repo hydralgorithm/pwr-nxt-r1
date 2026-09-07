@@ -1,0 +1,72 @@
+Task 1 bake-off (repeated 5x3 stratified CV, out-of-fold):
+
+TabPFN requires a one-time license acceptance to download model weights for local inference.
+Opening your browser to complete login/registration…
+
+  https://ux.priorlabs.ai/login?callback=http://localhost:51524&hf_repo_id=tabpfn_3
+
+Waiting for login to complete…
+
+Having trouble? You can also authenticate manually:
+  1. Open https://ux.priorlabs.ai/account in a browser (log in or register if needed)
+  2. Accept the license at https://ux.priorlabs.ai/account/licenses
+  3. Copy your API Key
+  4. Paste the API key below
+
+API key (or press Enter to keep waiting):   [skip] TabPFN(eng): OSError [WinError 10038] An operation was attempted on something that is not a socket
+                          model  accuracy  precision   recall       F1      AUC
+              RandomForest(eng)     0.999   1.000000 0.992537 0.996255 1.000000
+                   SVM-RBF(eng)     0.999   1.000000 0.992537 0.996255 1.000000
+                ExtraTrees(eng)     0.998   1.000000 0.985075 0.992481 1.000000
+                  CatBoost(eng)     0.997   0.992481 0.985075 0.988764 0.999905
+                  LightGBM(eng)     0.996   1.000000 0.970149 0.984848 0.976371
+ HYBRID rules|LightGBM(eng)@0.5     0.990   0.930556 1.000000 0.964029 0.994226
+HYBRID rules|LightGBM(eng)@0.35     0.990   0.930556 1.000000 0.964029 0.994226
+   HYBRID rules|HistGB(eng)@0.5     0.989   0.924138 1.000000 0.960573 0.993649
+HYBRID rules|CatBoost(eng)@0.35     0.989   0.930070 0.992537 0.960289 0.990495
+ HYBRID rules|CatBoost(eng)@0.5     0.989   0.930070 0.992537 0.960289 0.990495
+  HYBRID rules|HistGB(eng)@0.35     0.987   0.911565 1.000000 0.953737 0.992494
+                    HistGB(eng)     0.986   0.983871 0.910448 0.945736 0.994209
+                  Logistic(eng)     0.986   0.991803 0.902985 0.945312 0.981197
+  HYBRID rules|XGBoost(eng)@0.5     0.985   0.928058 0.962687 0.945055 0.975570
+ HYBRID rules|XGBoost(eng)@0.35     0.981   0.902098 0.962687 0.931408 0.973260
+                   XGBoost(eng)     0.974   1.000000 0.805970 0.892562 0.961945
+                       kNN(eng)     0.960   1.000000 0.701493 0.824561 0.981223
+                    RULE-ENGINE     0.952   0.905660 0.716418 0.800000 0.852435
+                  Logistic(raw)     0.562   0.131068 0.402985 0.197802 0.458585
+                Dummy(majority)     0.866   0.000000 0.000000 0.000000 0.500000
+
+Task 2 bake-off (repeated 5x3 CV, Valid rows only):
+
+TabPFN requires a one-time license acceptance to download model weights for local inference.
+Opening your browser to complete login/registration…
+
+  https://ux.priorlabs.ai/login?callback=http://localhost:54254&hf_repo_id=tabpfn_3
+
+Waiting for login to complete…
+
+Having trouble? You can also authenticate manually:
+  1. Open https://ux.priorlabs.ai/account in a browser (log in or register if needed)
+  2. Accept the license at https://ux.priorlabs.ai/account/licenses
+  3. Copy your API Key
+  4. Paste the API key below
+
+API key (or press Enter to keep waiting):   [skip] TabPFN(inputs): OSError [WinError 10038] An operation was attempted on something that is not a socket
+                     model      RMSE      MAE        R2
+          CatBoost(inputs)  0.554891 0.365246  0.997329
+           XGBoost(inputs)  0.790158 0.516241  0.994584
+LightGBM-5seed-bag(inputs)  1.064750 0.590117  0.990166
+           SVR-RBF(inputs)  1.074544 0.664818  0.989984
+     LightGBM(inputs+S123)  1.082509 0.597892  0.989835
+          LightGBM(inputs)  1.089179 0.615506  0.989709
+            HistGB(inputs)  1.160797 0.649723  0.988311
+       HistGB(inputs+S123)  1.169183 0.638647  0.988142
+      RandomForest(inputs)  1.360074 0.771174  0.983954
+        ExtraTrees(inputs)  1.400863 0.707344  0.982977
+ OLS-physics(I,I2,Amb,V,t)  1.539016 1.097790  0.979454
+          Ridge(inputs+I2)  1.552958 1.116270  0.979080
+               kNN(inputs)  2.218439 1.332039  0.957308
+     ElasticNet(inputs+I2)  2.811392 2.279471  0.931437
+               Dummy(mean) 10.756952 8.880775 -0.003749
+
+Saved -> C:\Users\Abdul Fattah\Desktop\powernext\results\bakeoff_task1.csv, C:\Users\Abdul Fattah\Desktop\powernext\results\bakeoff_task2.csv, bakeoff.json
