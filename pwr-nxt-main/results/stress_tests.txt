@@ -1,0 +1,30 @@
+==============================================================================
+STRESS TEST EVIDENCE — team pentupbois (regenerated, seed 42)
+==============================================================================
+
+[1] Task 2 extrapolation: withhold the top quintile of each operating
+    dimension, train on the rest, predict the withheld band.
+    axis                             held-out band  hybrid RMSE  pure CAT
+    Load_Current_A                   [92.1, 110.0]        2.721     9.358
+    Applied_Voltage_kV                [27.9, 32.0]        0.335     0.759
+    Ambient_Temperature_C             [40.5, 55.0]        2.473     3.510
+    Test_Duration_min                 [47.5, 60.0]        0.530     0.648
+
+[2] Task 1 label-noise: flip 5% of training labels at random, re-run
+    the full CV protocol, score against the corrupted labels.
+    corrupted labels: 53 of 1000 flipped
+    CV accuracy vs corrupted labels: 0.946
+
+[3] Task 1 out-of-fold error analysis (uncorrupted labels).
+    missed Invalid (false negatives): 1  ['TRN-0766']
+    false-flagged Valid (false positives): 0
+
+[4] Task 2 noise floor: OOF residual vs each input. If |corr| ~ 0
+    everywhere, no learnable signal remains (we are at the floor).
+    corr(resid, Applied_Voltage_kV      ) = +0.0078
+    corr(resid, Load_Current_A          ) = +0.0455
+    corr(resid, Ambient_Temperature_C   ) = +0.0602
+    corr(resid, Test_Duration_min       ) = +0.0194
+    corr(resid, I2                      ) = +0.0454
+    max |corr| = 0.0602  -> no learnable structure remains: at the noise floor
+    CV RMSE = 0.4147

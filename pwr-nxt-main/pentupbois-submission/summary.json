@@ -1,0 +1,64 @@
+{
+  "team": "pentupbois",
+  "record_count": 350,
+  "predicted_invalid_count": 46,
+  "predicted_valid_count": 304,
+  "rule_layer_invalid_count": 39,
+  "reference_parameter": {
+    "min": 12.6042,
+    "max": 60.4,
+    "mean": 26.37701942857143,
+    "median": 23.05285,
+    "std": 10.340513289725012
+  },
+  "highest_attention_test_ids": [
+    "TST-0047",
+    "TST-0107",
+    "TST-0013"
+  ],
+  "attention_rule": "Highest predicted Reference_Parameter among Valid rows whose ensemble validity probability is in the least-confident quartile (>= 75th percentile of P(Invalid)); falls back to all Valid rows if fewer than 3 qualify.",
+  "methodology_blurb": "Hybrid physics-plus-ML pipeline. Validity is decided by a four-model ensemble (random forest, SVM, LightGBM, CatBoost) on relationship features: inter-sensor residuals against a Valid-fit agreement model, duplicate-logging structure, missingness pattern, and impossible readings. Reference_Parameter is predicted from operating inputs only by a physics-informed hybrid: a Joule-heating linear model carries the extrapolatable physics and a bagged CatBoost learns the bounded residual correction. Thresholds derive from Valid-row distributions; fully automatic, no manual edits.",
+  "validation": {
+    "task1_cv": {
+      "accuracy": 0.999,
+      "precision_invalid": 1.0,
+      "recall_invalid": 0.9925373134328358,
+      "f1_invalid": 0.9962546816479401,
+      "auc": 0.9999913825790218,
+      "protocol": "repeated 5x3-fold stratified CV, out-of-fold, all preprocessing refit in-fold"
+    },
+    "task2_cv": {
+      "rmse": 0.41474749523320303,
+      "mae": 0.266716843953761,
+      "r2": 0.9985078433713703,
+      "n_train_valid": 866,
+      "oof_abs_error_q90": 0.5324866633008813,
+      "protocol": "repeated 5x3-fold CV on Valid rows only, out-of-fold"
+    }
+  },
+  "physics_model_agreement": {
+    "pearson_r_catboost_vs_ols_on_test": 0.9895117655156902,
+    "mean_abs_diff": 1.0406038839790517
+  },
+  "prediction_uncertainty": {
+    "p90_abs_error_degC": 0.5324866633008813,
+    "interpretation": "Based on out-of-fold CV, 90% of predictions are expected within this absolute error (degC) of the true value."
+  },
+  "input_drift_check": {
+    "ks_pvalue_per_input": {
+      "Applied_Voltage_kV": 0.372,
+      "Load_Current_A": 0.6047,
+      "Ambient_Temperature_C": 0.8986,
+      "Test_Duration_min": 0.7803
+    },
+    "within_training_distribution": true,
+    "note": "Kolmogorov-Smirnov test per input vs training; p >= 0.05 means no detectable distribution shift. If False on a future run, predictions rely on the extrapolating physics base."
+  },
+  "noise_floor_diagnostic": {
+    "Applied_Voltage_kV": 0.0078,
+    "Load_Current_A": 0.0455,
+    "Ambient_Temperature_C": 0.0602,
+    "Test_Duration_min": 0.0194,
+    "I2": 0.0454
+  }
+}

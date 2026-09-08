@@ -1,0 +1,5 @@
+.claude/
+submission/
+catboost_info/
+__pycache__/
+*.pyc
