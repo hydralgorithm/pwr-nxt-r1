@@ -16,8 +16,8 @@ STRESS TEST EVIDENCE — team pentupbois (regenerated, seed 42)
     CV accuracy vs corrupted labels: 0.946
 
 [3] Task 1 out-of-fold error analysis (uncorrupted labels).
-    missed Invalid (false negatives): 1  ['TRN-0766']
-    false-flagged Valid (false positives): 0
+    missed Invalid (false negatives): 1  ['TRN-0837']
+    false-flagged Valid (false positives): 0  []
 
 [4] Task 2 noise floor: OOF residual vs each input. If |corr| ~ 0
     everywhere, no learnable signal remains (we are at the floor).
@@ -28,3 +28,10 @@ STRESS TEST EVIDENCE — team pentupbois (regenerated, seed 42)
     corr(resid, I2                      ) = +0.0454
     max |corr| = 0.0602  -> no learnable structure remains: at the noise floor
     CV RMSE = 0.4147
+
+[5] Task 1 duplicate-group leakage check: 5-fold GroupKFold where
+    duplicate feature-vector groups are never split across folds.
+    If standard CV was inflated by memorizing duplicate twins, this drops.
+    accuracy 0.9980  precision 1.0000  recall 0.9851  f1 0.9925
+    duplicate rows caught without twins in training: 24/24
+    -> no duplicate leakage: dup flags use deployment semantics

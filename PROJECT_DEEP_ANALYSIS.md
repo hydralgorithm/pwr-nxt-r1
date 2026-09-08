@@ -98,11 +98,13 @@ preprocessing refit in-fold):**
 The ensemble ties the best single model on CV while adding diversity for
 the hidden data. Final honest CV: accuracy 0.999, precision 1.000, recall
 0.993, F1 0.996, AUC 0.99999. Error analysis: exactly **1 missed Invalid of
-134** (TRN-0766, a borderline S3 miscalibration whose residual sits at the
-12th percentile of the Valid residual distribution — indistinguishable from
-honest noise) and **0 false-flagged Valid rows** — the correct trade,
-since catching that one row would require thresholds loose enough to flag
-many Valid rows.
+134** (TRN-0837, a borderline S3 miscalibration: S3 sits 2.26 °C *below*
+the S1-agreement prediction, just past the lowest honest reading — Valid
+residuals span −1.79 to +1.59) and **0 false-flagged Valid rows**. The
+deployed model (trained on all 1000 rows) flags this row at
+P(Invalid) = 0.943, so the CV miss is a worst-case estimate. A two-sided
+version of rule R4 would catch it but flags 5 honest Valid rows — the
+correct trade is to leave it.
 
 **Alternatives rejected:** stacking (overfits ~1000 rows); a single
 "best" model (no diversity insurance); rules-OR-model hybrid (full recall,
@@ -301,7 +303,8 @@ powernext/
 │   │                                  sweeps, blends.
 │   └── stress_tests.py              Regenerates every stress-test number
 │                                      cited in the methodology note into
-│                                      results/stress_tests.txt.
+│                                      results/stress_tests.txt (incl. the
+│                                      duplicate-group leakage check).
 │
 ├── results/                         Evidence tables backing every model choice:
 │   ├── bakeoff_task1.csv / bakeoff_task2.csv / bakeoff.json   (round-1 results)

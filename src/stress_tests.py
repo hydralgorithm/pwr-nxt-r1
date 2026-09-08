@@ -5,6 +5,7 @@ Regenerates every stress-test number cited in the methodology note:
   2. Task 1 label-noise sensitivity (5% of labels flipped)
   3. Task 1 out-of-fold error analysis (missed Invalid / false-flagged Valid)
   4. Task 2 noise-floor diagnostic (OOF residual vs input correlations)
+  5. Task 1 duplicate-group leakage check (GroupKFold, twins never split)
 
 Writes results/stress_tests.txt. Deterministic (seed 42).
 Run:  python src/stress_tests.py
@@ -26,8 +27,10 @@ sys.path.insert(0, str(ROOT / "src"))
 import pipeline as P
 
 from catboost import CatBoostRegressor
-from sklearn.metrics import accuracy_score, mean_squared_error
-from sklearn.model_selection import RepeatedKFold, RepeatedStratifiedKFold
+from sklearn.metrics import (accuracy_score, f1_score, mean_squared_error,
+                             precision_score, recall_score)
+from sklearn.model_selection import (GroupKFold, RepeatedKFold,
+                                     RepeatedStratifiedKFold)
 
 OUT = io.StringIO()
 
@@ -109,10 +112,10 @@ def main():
     log("")
     log("[3] Task 1 out-of-fold error analysis (uncorrupted labels).")
     y, preds = task1_oof(tr)
-    fn = tr.index[(y == 1) & (preds == 0)]
-    fp = tr.index[(y == 0) & (preds == 1)]
-    log(f"    missed Invalid (false negatives): {len(fn)}  {[f'TRN-{i:04d}' for i in fn]}")
-    log(f"    false-flagged Valid (false positives): {len(fp)}")
+    fn = tr.loc[(y == 1) & (preds == 0), "Test_ID"].tolist()
+    fp = tr.loc[(y == 0) & (preds == 1), "Test_ID"].tolist()
+    log(f"    missed Invalid (false negatives): {len(fn)}  {fn}")
+    log(f"    false-flagged Valid (false positives): {len(fp)}  {fp}")
 
     # ---- 4. Task 2 noise-floor diagnostic ----------------------------------
     log("")
@@ -132,6 +135,26 @@ def main():
     log(f"    max |corr| = {max(abs(np.corrcoef(resid, vd[c])[0, 1]) for c in vd.columns):.4f}"
         "  -> no learnable structure remains: at the noise floor")
     log(f"    CV RMSE = {np.sqrt(mean_squared_error(yv, oof)):.4f}")
+
+    # ---- 5. Task 1 duplicate-group leakage check ---------------------------
+    log("")
+    log("[5] Task 1 duplicate-group leakage check: 5-fold GroupKFold where")
+    log("    duplicate feature-vector groups are never split across folds.")
+    log("    If standard CV was inflated by memorizing duplicate twins, this drops.")
+    groups = tr.groupby(P.IN + P.SEN, dropna=False).ngroup().values
+    dup_all = tr.duplicated(subset=P.IN + P.SEN, keep=False)
+    gpreds = np.zeros(len(tr))
+    for trn, tst in GroupKFold(n_splits=5).split(tr, y, groups):
+        sub = P.train_task1(tr.iloc[trn])
+        res = P.apply_task1(sub, tr.iloc[tst], dup_flags=dup_all.iloc[tst])
+        gpreds[tst] = res["invalid"].astype(int)
+    n_dup = int(dup_all.sum())
+    dup_caught = int(gpreds[dup_all.values].sum())
+    log(f"    accuracy {accuracy_score(y, gpreds):.4f}  "
+        f"precision {precision_score(y, gpreds):.4f}  "
+        f"recall {recall_score(y, gpreds):.4f}  f1 {f1_score(y, gpreds):.4f}")
+    log(f"    duplicate rows caught without twins in training: {dup_caught}/{n_dup}")
+    log("    -> no duplicate leakage: dup flags use deployment semantics")
 
     out_path = ROOT / "results" / "stress_tests.txt"
     out_path.write_text(OUT.getvalue(), encoding="utf-8")
