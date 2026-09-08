@@ -129,7 +129,8 @@ prediction.
 
 `src/pipeline.py` is the complete solution. Place the participant workbook
 (`CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx`) next to `src/` and
-run `python src/pipeline.py` — it regenerates both deliverable files
-end-to-end with no manual modification of individual records; all
-thresholds are derived from the data at run time, never hardcoded; fixed
-seeds; the output hash is verified identical on re-run.
+run `python src/pipeline.py` — it regenerates both deliverable files in
+place (requires pandas, numpy, scikit-learn, lightgbm, catboost, scipy,
+openpyxl) with no manual per-record edits; all
+thresholds derive from the data at run time, never hardcoded; fixed
+seeds; outputs verified identical on re-run.

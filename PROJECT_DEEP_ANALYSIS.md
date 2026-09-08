@@ -282,6 +282,7 @@ powernext/
 │   └── src/pipeline.py               Deliverable 3: the complete program.
 │
 ├── README.md                         GitHub front page.
+├── requirements.txt                  Python dependencies (pip install -r).
 │
 ├── CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx
 │                                    The organizers' input data (read-only).
@@ -322,10 +323,12 @@ powernext/
 ```
 
 **To reproduce everything from scratch:** place the xlsx next to `src/`, run
-`python src/pipeline.py` (needs Python 3.11+, pandas, numpy, statsmodels,
-scikit-learn, lightgbm, catboost, openpyxl). It regenerates both deliverable
-files deterministically. `python src/bakeoff.py` regenerates the model-
-comparison evidence.
+`python src/pipeline.py` (needs Python 3.10+, pandas, numpy, scikit-learn,
+lightgbm, catboost, scipy, openpyxl — see `requirements.txt`; the pipeline
+also runs self-contained from inside `pentupbois-submission/`, writing the
+deliverables in place; `bakeoff.py` additionally needs statsmodels). It
+regenerates both deliverable files deterministically. `python src/bakeoff.py`
+regenerates the model-comparison evidence.
 
 ---
 

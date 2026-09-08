@@ -28,20 +28,20 @@
       "protocol": "repeated 5x3-fold stratified CV, out-of-fold, all preprocessing refit in-fold"
     },
     "task2_cv": {
-      "rmse": 0.41474749523320303,
-      "mae": 0.266716843953761,
-      "r2": 0.9985078433713703,
+      "rmse": 0.4147474952330901,
+      "mae": 0.2667168439537316,
+      "r2": 0.9985078433713711,
       "n_train_valid": 866,
-      "oof_abs_error_q90": 0.5324866633008813,
+      "oof_abs_error_q90": 0.5324866633036596,
       "protocol": "repeated 5x3-fold CV on Valid rows only, out-of-fold"
     }
   },
   "physics_model_agreement": {
-    "pearson_r_catboost_vs_ols_on_test": 0.9895117655156902,
-    "mean_abs_diff": 1.0406038839790517
+    "pearson_r_catboost_vs_ols_on_test": 0.989511765515691,
+    "mean_abs_diff": 1.0406038839791416
   },
   "prediction_uncertainty": {
-    "p90_abs_error_degC": 0.5324866633008813,
+    "p90_abs_error_degC": 0.5324866633036596,
     "interpretation": "Based on out-of-fold CV, 90% of predictions are expected within this absolute error (degC) of the true value."
   },
   "input_drift_check": {

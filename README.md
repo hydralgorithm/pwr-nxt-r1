@@ -75,17 +75,20 @@ archive/                        internal/historical documents
 
 ## Reproduce
 
-With the xlsx next to `src/` (as in this repo):
+The pipeline finds the workbook next to `src/`, in the working directory,
+or in the parent folder — so it runs from the repo root or from inside
+`pentupbois-submission/` (where it writes the deliverables in place):
 
 ```bash
-python src/pipeline.py       # -> submission/pentupbois.csv + submission/summary.json
+python src/pipeline.py       # -> submission/ (repo root) or in-place (package)
 python src/stress_tests.py   # -> results/stress_tests.txt
 python src/bakeoff.py        # -> model bake-off tables in results/
 ```
 
-Requires Python 3.11+ with `pandas numpy statsmodels scikit-learn lightgbm
-catboost scipy openpyxl`. No manual record edits; all thresholds derive from
-the data at run time; outputs verified identical on re-run.
+Requires Python 3.10+ with `pandas numpy scikit-learn lightgbm catboost
+scipy openpyxl` (`pip install -r requirements.txt`); `bakeoff.py`
+additionally needs `statsmodels`. No manual record edits; all thresholds
+derive from the data at run time; outputs verified identical on re-run.
 
 Note: `submission/` is a build output (gitignored) — the canonical submitted
 deliverables live in [`pentupbois-submission/`](pentupbois-submission/).

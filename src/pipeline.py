@@ -27,23 +27,36 @@ reported as an explainability layer; the learned ensemble subsumes them
 (features include the rule flags) and outperforms them under honest CV.
 
 Run:  python src/pipeline.py      ->  submission/pentupbois.csv, submission/summary.json
+      (when run inside pentupbois-submission/, the deliverables are also
+      written next to src/ — the package is self-contained)
 """
 from __future__ import annotations
 
 import json
+import sys
 import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
+from sklearn.linear_model import LinearRegression
 
 warnings.filterwarnings("ignore")
 
 ROOT = Path(__file__).resolve().parent.parent
-XLSX = ROOT / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx"
 SUB = ROOT / "submission"
 SUB.mkdir(exist_ok=True)
+
+# Flexible dataset location search: CLI argument > ROOT > cwd > parent
+_candidates = []
+if len(sys.argv) > 1 and Path(sys.argv[1]).is_file():
+    _candidates.append(Path(sys.argv[1]))
+_candidates.extend([
+    ROOT / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx",
+    Path.cwd() / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx",
+    ROOT.parent / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx",
+])
+XLSX = next((p for p in _candidates if p.exists()), _candidates[0])
 
 SEED = 42
 TEAM = "pentupbois"
@@ -64,8 +77,8 @@ def sensor_residual_params(valid: pd.DataFrame) -> dict:
     p = {}
     for a, b in [("Sensor_S1", "Sensor_S2"), ("Sensor_S1", "Sensor_S3")]:
         d = valid[[a, b]].dropna()
-        m = sm.OLS(d[b], sm.add_constant(d[a])).fit()
-        p[b] = (float(m.params.iloc[0]), float(m.params.iloc[1]))
+        lr = LinearRegression().fit(d[[a]], d[b])
+        p[b] = (float(lr.intercept_), float(lr.coef_[0]))
     return p
 
 
@@ -181,8 +194,8 @@ def train_task2(tr: pd.DataFrame) -> dict:
 
     lin_cols = ["Load_Current_A", "I2", "Ambient_Temperature_C",
                 "Applied_Voltage_kV", "Test_Duration_min"]
-    ols = sm.OLS(y, sm.add_constant(X[lin_cols])).fit()
-    resid = y - ols.predict(sm.add_constant(X[lin_cols]))
+    ols = LinearRegression().fit(X[lin_cols], y)
+    resid = y - ols.predict(X[lin_cols])
 
     regs = []
     for s in range(5):
@@ -204,7 +217,7 @@ def _reg_matrix(df: pd.DataFrame) -> pd.DataFrame:
 def apply_task2(model: dict, df: pd.DataFrame) -> np.ndarray:
     X = df[IN].copy()
     X["I2"] = X["Load_Current_A"] ** 2
-    base = model["ols"].predict(sm.add_constant(X[model["ols_cols"]]))
+    base = model["ols"].predict(X[model["ols_cols"]])
     corr = np.mean([m.predict(_reg_matrix(df)) for m in model["regs"]], axis=0)
     return base + corr
 
@@ -212,7 +225,7 @@ def apply_task2(model: dict, df: pd.DataFrame) -> np.ndarray:
 def apply_task2_ols(model: dict, df: pd.DataFrame) -> np.ndarray:
     X = df[IN].copy()
     X["I2"] = X["Load_Current_A"] ** 2
-    return model["ols"].predict(sm.add_constant(X[model["ols_cols"]]))
+    return model["ols"].predict(X[model["ols_cols"]])
 
 
 # ============================================================== Task 3
@@ -336,6 +349,8 @@ def main():
         "Validity_Label": np.where(out_te["invalid"], "Invalid", "Valid"),
     })
     sub_df.to_csv(SUB / f"{TEAM}.csv", index=False)
+    if ROOT.name == "pentupbois-submission":  # self-contained package run
+        sub_df.to_csv(ROOT / f"{TEAM}.csv", index=False)
 
     summary = make_summary(out_te, t1_cv, t2_cv, int(out_te["rule_invalid"].sum()))
     summary["physics_model_agreement"] = {
@@ -360,7 +375,10 @@ def main():
                 "predictions rely on the extrapolating physics base.",
     }
     summary["noise_floor_diagnostic"] = {k: round(v, 4) for k, v in floor_diag.items()}
-    (SUB / "summary.json").write_text(json.dumps(summary, indent=2))
+    summary_json_text = json.dumps(summary, indent=2)
+    (SUB / "summary.json").write_text(summary_json_text)
+    if ROOT.name == "pentupbois-submission":
+        (ROOT / "summary.json").write_text(summary_json_text)
 
     # sanity report
     dup_ids = te.loc[te.duplicated(subset=IN + SEN, keep=False), "Test_ID"].tolist()
