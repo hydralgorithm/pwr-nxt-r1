@@ -26,9 +26,9 @@ reading, thermometer dropout, inter-sensor disagreement) are computed and
 reported as an explainability layer; the learned ensemble subsumes them
 (features include the rule flags) and outperforms them under honest CV.
 
-Run:  python src/pipeline.py      ->  submission/pentupbois.csv, submission/summary.json
-      (when run inside pentupbois-submission/, the deliverables are also
-      written next to src/ — the package is self-contained)
+Run:  python pipeline.py       ->  pentupbois.csv + summary.json, written
+      next to the script when run inside the submission package, or into
+      submission/ when run from the repo working copy (src/pipeline.py)
 """
 from __future__ import annotations
 
@@ -43,8 +43,12 @@ from sklearn.linear_model import LinearRegression
 
 warnings.filterwarnings("ignore")
 
-ROOT = Path(__file__).resolve().parent.parent
-SUB = ROOT / "submission"
+HERE = Path(__file__).resolve().parent
+# submission package: the methodology note sits next to the script; in the
+# repo working copy the script lives in src/ and the project root is above it
+PKG = (HERE / "METHODOLOGY_NOTE.md").is_file()
+ROOT = HERE if PKG else HERE.parent
+SUB = ROOT if PKG else ROOT / "submission"
 SUB.mkdir(exist_ok=True)
 
 # Flexible dataset location search: CLI argument > ROOT > cwd > parent
@@ -53,6 +57,7 @@ if len(sys.argv) > 1 and Path(sys.argv[1]).is_file():
     _candidates.append(Path(sys.argv[1]))
 _candidates.extend([
     ROOT / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx",
+    HERE / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx",
     Path.cwd() / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx",
     ROOT.parent / "CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx",
 ])
@@ -372,8 +377,6 @@ def main():
         "Validity_Label": np.where(out_te["invalid"], "Invalid", "Valid"),
     })
     sub_df.to_csv(SUB / f"{TEAM}.csv", index=False)
-    if ROOT.name == "pentupbois-submission":  # self-contained package run
-        sub_df.to_csv(ROOT / f"{TEAM}.csv", index=False)
 
     # read back the written csv and verify it against the submission protocol
     rb = pd.read_csv(SUB / f"{TEAM}.csv")
@@ -411,8 +414,6 @@ def main():
     summary["noise_floor_diagnostic"] = {k: round(v, 4) for k, v in floor_diag.items()}
     summary_json_text = json.dumps(summary, indent=2)
     (SUB / "summary.json").write_text(summary_json_text)
-    if ROOT.name == "pentupbois-submission":
-        (ROOT / "summary.json").write_text(summary_json_text)
 
     # sanity report
     dup_ids = te.loc[te.duplicated(subset=IN + SEN, keep=False), "Test_ID"].tolist()

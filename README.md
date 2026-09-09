@@ -65,8 +65,8 @@ pentupbois-submission.zip     ★ the exact 4-file package uploaded to the judge
 pentupbois-submission/          the same package, unpacked (canonical deliverables)
 ├── pentupbois.csv              deliverable 1: predictions in required format
 ├── summary.json                deliverable 2: Task 3 auto-summary
-├── METHODOLOGY_NOTE.md         deliverable 4: ≤2-page methodology
-└── src/pipeline.py             deliverable 3: the complete program
+├── pipeline.py                 deliverable 3: the complete program
+└── METHODOLOGY_NOTE.md         deliverable 4: ≤2-page methodology
 src/                            working code (pipeline.py + bake-off + stress tests)
 results/                        evidence tables backing every model choice
 CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx   organizers' input data
@@ -76,12 +76,13 @@ archive/                        internal/historical documents
 
 ## Reproduce
 
-The pipeline finds the workbook next to `src/`, in the working directory,
-or in the parent folder — so it runs from the repo root or from inside
-`pentupbois-submission/` (where it writes the deliverables in place):
+The pipeline finds the workbook next to itself, in the working directory,
+or in the parent folder — so it runs from the repo root or from inside the
+unpacked package (where it regenerates the deliverables in place):
 
 ```bash
-python src/pipeline.py       # -> submission/ (repo root) or in-place (package)
+python src/pipeline.py       # repo working copy -> submission/ (gitignored)
+python pipeline.py           # inside pentupbois-submission/ -> in place
 python src/stress_tests.py   # -> results/stress_tests.txt
 python src/bakeoff.py        # -> model bake-off tables in results/
 ```

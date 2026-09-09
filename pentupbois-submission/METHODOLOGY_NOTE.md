@@ -129,9 +129,9 @@ prediction.
 
 ## 8. Reproducibility
 
-`src/pipeline.py` is the complete solution. Place the participant workbook
-(`CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx`) next to `src/` and
-run `python src/pipeline.py` — it regenerates both deliverable files in
+`pipeline.py` is the complete solution. Place the participant workbook
+(`CPRI_Hackathon_Screening_Dataset_PARTICIPANT.xlsx`) next to it and
+run `python pipeline.py` — it regenerates both deliverable files in
 place (requires pandas, numpy, scikit-learn, lightgbm, catboost, scipy,
 openpyxl); no manual edits, thresholds derive from the data at run time;
 fixed seeds; outputs verified identical on re-run.
