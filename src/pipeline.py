@@ -9,15 +9,15 @@ Winning architecture (selected by a 17-candidate bake-off under repeated
           *relationship* features (inter-sensor residuals, duplicate
           structure, missingness pattern, non-positivity).
           CV: accuracy 0.999, precision 1.000, recall 0.993, F1 0.996, AUC 1.000.
-  Task 2  Reference_Parameter: physics-informed hybrid — an OLS physics base
-          (Ref ~ I + I^2 + Ambient + Voltage + Duration) plus a 5-seed bagged
-          CatBoost (depth 4) that learns only the bounded residual correction,
-          on operating inputs only (V, I, I^2, V*I, Ambient, Duration) —
-          deliberately sensor-free so predictions are immune to the very faults
-          Task 1 detects. CV RMSE 0.41 degC, MAE 0.27, R^2 0.9985 on Valid
-          rows; ~3x better than pure CatBoost when predicting beyond the
-          training current range (tree models cannot extrapolate; the OLS
-          base can).
+  Task 2  Reference_Parameter: physics-informed hybrid — an additive cubic
+          Ridge base (each operating input V, I, Ambient, Duration to powers
+          1-3, standardized) plus a 5-seed bagged CatBoost (depth 4) that
+          learns only the bounded residual correction, on operating inputs
+          only — deliberately sensor-free so predictions are immune to the
+          very faults Task 1 detects. CV RMSE 0.37 degC, MAE 0.25, R^2 0.9988
+          on Valid rows; ~2x better than the previous linear-base hybrid when
+          predicting beyond the training current range (tree models cannot
+          extrapolate; the polynomial base can).
   Task 3  programmatic summary.json (counts, min/max/avg, 3 attention IDs,
           <=100-word blurb, CV metrics).
 
@@ -175,27 +175,42 @@ def apply_task1(model: dict, df: pd.DataFrame, dup_flags: pd.Series | None = Non
 
 
 # ============================================================== Task 2
-def train_task2(tr: pd.DataFrame) -> dict:
-    """Physics-informed hybrid: OLS physics base + 5-seed CatBoost residual bag.
+def cubic_expand(df: pd.DataFrame) -> pd.DataFrame:
+    """Additive cubic design matrix: each operating input to powers 1-3."""
+    E = pd.DataFrame(index=df.index)
+    for c in IN:
+        for p in (1, 2, 3):
+            E[f"{c}^{p}"] = df[c] ** p
+    return E
 
-    The OLS term (I + I^2 + Ambient + Voltage + Duration) carries the
-    extrapolatable physics; the CatBoost bag learns only the bounded residual
-    correction. In-range CV RMSE 0.415 (vs 0.517 pure CatBoost) and ~3x better
-    error when predicting beyond the training current range (stress test:
-    RMSE 3.5 vs 11.4 on a held-out 85-110A band).
+
+def train_task2(tr: pd.DataFrame) -> dict:
+    """Physics-informed hybrid: additive cubic Ridge base + 5-seed CatBoost
+    residual bag.
+
+    The polynomial base (each operating input to powers 1-3, standardized,
+    Ridge alpha=1) carries the extrapolatable physics; the CatBoost bag
+    learns only the bounded residual correction on operating inputs.
+    In-range CV RMSE 0.371 (vs 0.415 with a linear base, 0.517 pure
+    CatBoost) and ~2x better error when predicting beyond the training
+    current range (stress test: RMSE 1.40 vs 2.72 for the linear base on
+    the held-out top-quintile current band).
     """
     from catboost import CatBoostRegressor
+    from sklearn.linear_model import Ridge
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
 
     valid = tr[tr.Validity_Label == "Valid"].copy()
+    y = valid[YCOL]
+
+    base = make_pipeline(StandardScaler(), Ridge(alpha=1.0))
+    base.fit(cubic_expand(valid), y)
+    resid = y - base.predict(cubic_expand(valid))
+
     X = valid[IN].copy()
     X["I2"] = X["Load_Current_A"] ** 2
     X["VI"] = X["Applied_Voltage_kV"] * X["Load_Current_A"]
-    y = valid[YCOL]
-
-    lin_cols = ["Load_Current_A", "I2", "Ambient_Temperature_C",
-                "Applied_Voltage_kV", "Test_Duration_min"]
-    ols = LinearRegression().fit(X[lin_cols], y)
-    resid = y - ols.predict(X[lin_cols])
 
     regs = []
     for s in range(5):
@@ -204,7 +219,7 @@ def train_task2(tr: pd.DataFrame) -> dict:
         m.fit(X[REG_COLS], resid)
         regs.append(m)
 
-    return {"regs": regs, "ols": ols, "ols_cols": lin_cols}
+    return {"regs": regs, "base": base}
 
 
 def _reg_matrix(df: pd.DataFrame) -> pd.DataFrame:
@@ -215,17 +230,13 @@ def _reg_matrix(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_task2(model: dict, df: pd.DataFrame) -> np.ndarray:
-    X = df[IN].copy()
-    X["I2"] = X["Load_Current_A"] ** 2
-    base = model["ols"].predict(X[model["ols_cols"]])
+    base = model["base"].predict(cubic_expand(df))
     corr = np.mean([m.predict(_reg_matrix(df)) for m in model["regs"]], axis=0)
     return base + corr
 
 
-def apply_task2_ols(model: dict, df: pd.DataFrame) -> np.ndarray:
-    X = df[IN].copy()
-    X["I2"] = X["Load_Current_A"] ** 2
-    return model["ols"].predict(X[model["ols_cols"]])
+def apply_task2_base(model: dict, df: pd.DataFrame) -> np.ndarray:
+    return model["base"].predict(cubic_expand(df))
 
 
 # ============================================================== Task 3
@@ -243,7 +254,7 @@ def make_summary(pred_df: pd.DataFrame, t1_cv: dict, t2_cv: dict, rule_hits: int
         "features: inter-sensor residuals against a Valid-fit agreement model, "
         "duplicate-logging structure, missingness pattern, and impossible "
         "readings. Reference_Parameter is predicted from operating inputs only "
-        "by a physics-informed hybrid: a Joule-heating linear model carries "
+        "by a physics-informed hybrid: a Joule-heating polynomial base carries "
         "the extrapolatable physics and a bagged CatBoost learns the bounded "
         "residual correction. Thresholds derive from Valid-row distributions; "
         "fully automatic, no manual edits."
@@ -284,6 +295,18 @@ def main():
     te = pd.read_excel(XLSX, sheet_name="Test_Data")
     ss = pd.read_excel(XLSX, sheet_name="Sample_Submission")
 
+    # ---- defensive input validation: fail loudly on a malformed workbook
+    req_common = IN + SEN + ["Test_ID"]
+    for name, df, extra in [("Training_Data", tr, [YCOL, "Validity_Label"]),
+                            ("Test_Data", te, [])]:
+        missing = [c for c in req_common + extra if c not in df.columns]
+        assert not missing, f"{name}: missing columns {missing}"
+        assert df["Test_ID"].is_unique, f"{name}: duplicate Test_IDs"
+    assert set(tr["Validity_Label"].unique()) <= {"Valid", "Invalid"}, \
+        "Training_Data: unexpected Validity_Label values"
+    assert len(te) == len(ss) and set(te["Test_ID"]) == set(ss["Test_ID"]), \
+        "Test_Data / Sample_Submission row or ID mismatch"
+
     # ---- Task 1: fit on all training data, apply to test
     m1 = train_task1(tr)
     out_te = apply_task1(m1, te)
@@ -311,7 +334,7 @@ def main():
     # ---- Task 2
     m2 = train_task2(tr)
     out_te["pred_ref"] = apply_task2(m2, te).round(4)  # rounded once; csv & summary agree exactly
-    ols_ref = apply_task2_ols(m2, te)
+    base_ref = apply_task2_base(m2, te)
 
     valid = tr[tr.Validity_Label == "Valid"].reset_index(drop=True)
     yv = valid[YCOL].values
@@ -352,10 +375,21 @@ def main():
     if ROOT.name == "pentupbois-submission":  # self-contained package run
         sub_df.to_csv(ROOT / f"{TEAM}.csv", index=False)
 
+    # read back the written csv and verify it against the submission protocol
+    rb = pd.read_csv(SUB / f"{TEAM}.csv")
+    assert list(rb.columns) == ["Test_ID", "Predicted_Reference_Parameter",
+                                "Validity_Label"], "read-back: column mismatch"
+    assert len(rb) == len(order) and rb["Test_ID"].tolist() == order, \
+        "read-back: row count or Sample_Submission order mismatch"
+    assert not rb.isna().any().any(), "read-back: missing values"
+    assert set(rb["Validity_Label"].unique()) <= {"Valid", "Invalid"}, \
+        "read-back: unexpected labels"
+    assert rb["Predicted_Reference_Parameter"].notna().all(), "read-back: NaN predictions"
+
     summary = make_summary(out_te, t1_cv, t2_cv, int(out_te["rule_invalid"].sum()))
     summary["physics_model_agreement"] = {
-        "pearson_r_catboost_vs_ols_on_test": float(np.corrcoef(out_te["pred_ref"], ols_ref)[0, 1]),
-        "mean_abs_diff": float(np.abs(out_te["pred_ref"] - ols_ref).mean()),
+        "pearson_r_hybrid_vs_polynomial_base_on_test": float(np.corrcoef(out_te["pred_ref"], base_ref)[0, 1]),
+        "mean_abs_diff": float(np.abs(out_te["pred_ref"] - base_ref).mean()),
     }
     # honest uncertainty: 90% of CV predictions were within this half-width
     summary["prediction_uncertainty"] = {

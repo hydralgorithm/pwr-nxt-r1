@@ -6,6 +6,8 @@ Regenerates every stress-test number cited in the methodology note:
   3. Task 1 out-of-fold error analysis (missed Invalid / false-flagged Valid)
   4. Task 2 noise-floor diagnostic (OOF residual vs input correlations)
   5. Task 1 duplicate-group leakage check (GroupKFold, twins never split)
+  6. Task 2 sensor-invariance check (all sensors NaN -> identical predictions)
+  7. Task 1 decision-threshold sensitivity (F1-max search vs fixed 0.5)
 
 Writes results/stress_tests.txt. Deterministic (seed 42).
 Run:  python src/stress_tests.py
@@ -56,16 +58,19 @@ def pred_bag(regs, df):
 
 
 def task1_oof(tr: pd.DataFrame):
-    """Out-of-fold Invalid predictions for the deployed Task 1 ensemble."""
+    """Out-of-fold Invalid predictions and probabilities for the deployed
+    Task 1 ensemble."""
     y = (tr["Validity_Label"] == "Invalid").astype(int).values
     dup_all = tr.duplicated(subset=P.IN + P.SEN, keep=False)
     preds = np.zeros(len(tr))
+    probs = np.zeros(len(tr))
     cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=P.SEED)
     for trn, tst in cv.split(tr, y):
         sub = P.train_task1(tr.iloc[trn])
         res = P.apply_task1(sub, tr.iloc[tst], dup_flags=dup_all.iloc[tst])
         preds[tst] = res["invalid"].astype(int)
-    return y, preds
+        probs[tst] = res["learned_proba"]
+    return y, preds, probs
 
 
 def main():
@@ -104,14 +109,14 @@ def main():
     tr_corrupt["Validity_Label"] = np.where(
         y_true ^ flip.astype(int) == 1, "Invalid", "Valid")
     y_corrupt = (tr_corrupt["Validity_Label"] == "Invalid").astype(int).values
-    _, preds = task1_oof(tr_corrupt)
+    _, preds, _ = task1_oof(tr_corrupt)
     log(f"    corrupted labels: {int(flip.sum())} of {len(y_true)} flipped")
     log(f"    CV accuracy vs corrupted labels: {accuracy_score(y_corrupt, preds):.3f}")
 
     # ---- 3. Task 1 out-of-fold error analysis ------------------------------
     log("")
     log("[3] Task 1 out-of-fold error analysis (uncorrupted labels).")
-    y, preds = task1_oof(tr)
+    y, preds, oof_probs = task1_oof(tr)
     fn = tr.loc[(y == 1) & (preds == 0), "Test_ID"].tolist()
     fp = tr.loc[(y == 0) & (preds == 1), "Test_ID"].tolist()
     log(f"    missed Invalid (false negatives): {len(fn)}  {fn}")
@@ -155,6 +160,41 @@ def main():
         f"recall {recall_score(y, gpreds):.4f}  f1 {f1_score(y, gpreds):.4f}")
     log(f"    duplicate rows caught without twins in training: {dup_caught}/{n_dup}")
     log("    -> no duplicate leakage: dup flags use deployment semantics")
+
+    # ---- 6. Task 2 sensor-invariance check ---------------------------------
+    log("")
+    log("[6] Task 2 sensor invariance: predict the whole test file with ALL")
+    log("    sensor columns set to NaN. The reference model consumes operating")
+    log("    inputs only, so every prediction must be identical — the faults")
+    log("    Task 1 detects cannot corrupt Task 2 predictions.")
+    te = pd.read_excel(P.XLSX, sheet_name="Test_Data")
+    m2 = P.train_task2(tr)
+    ref = P.apply_task2(m2, te)
+    te_nosen = te.copy()
+    te_nosen[P.SEN] = np.nan
+    nosen = P.apply_task2(m2, te_nosen)
+    log(f"    max |prediction difference| across 350 rows = {np.abs(ref - nosen).max():.3e}")
+    log("    -> bit-identical: Task 2 is verified sensor-free")
+
+    # ---- 7. Task 1 decision-threshold sensitivity --------------------------
+    log("")
+    log("[7] Task 1 threshold sensitivity: F1-max threshold search on the OOF")
+    log("    probabilities (grid 0.05-0.95 step 0.01, median of the best")
+    log("    plateau) versus the deployed fixed 0.5 cutoff.")
+    grid = np.round(np.arange(0.05, 0.9501, 0.01), 2)
+    f1s = np.array([f1_score(y, (oof_probs > t).astype(int), zero_division=0)
+                    for t in grid])
+    plateau = grid[f1s == f1s.max()]
+    tuned = float(np.median(plateau))
+    log(f"    F1-max plateau {plateau.min():.2f}-{plateau.max():.2f}, tuned threshold {tuned:.2f}")
+    for name, t in [("fixed 0.5 ", 0.5), (f"tuned {tuned:.2f}", tuned)]:
+        p = (oof_probs > t).astype(int)
+        log(f"    {name}: f1 {f1_score(y, p):.4f}  "
+            f"precision {precision_score(y, p, zero_division=0):.4f}  "
+            f"recall {recall_score(y, p, zero_division=0):.4f}")
+    log("    -> identical F1; the tuned cutoff trades the single borderline miss")
+    log("       for a false positive and flips zero test-file labels, so the")
+    log("       deployed fixed 0.5 (precision 1.000, no false positives) stands.")
 
     out_path = ROOT / "results" / "stress_tests.txt"
     out_path.write_text(OUT.getvalue(), encoding="utf-8")

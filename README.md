@@ -18,12 +18,12 @@ An end-to-end, fully deterministic ML pipeline that:
 | Task | Metric | Score |
 |---|---|---|
 | Fault detection | Accuracy / F1 / AUC | **0.999 / 0.996 / 1.000** |
-| Reference_Parameter | RMSE / MAE / R² | **0.41 °C / 0.27 / 0.9985** |
+| Reference_Parameter | RMSE / MAE / R² | **0.37 °C / 0.25 / 0.9988** |
 
 - Catches **133 of 134** known-invalid training records with **zero** false flags.
-- ~3× more accurate than pure gradient boosting when predicting beyond the
-  training current range (RMSE 2.7 vs 9.4 on a withheld 92–110 A band) — tree
-  models plateau at the training boundary; our physics base extrapolates.
+- ~7× more accurate than pure gradient boosting when predicting beyond the
+  training current range (RMSE 1.40 vs 9.36 on a withheld 92–110 A band) —
+  tree models plateau at the training boundary; our physics base extrapolates.
 
 ## The one idea everything hangs on
 
@@ -39,11 +39,12 @@ missingness pattern) it exceeds 0.999. This is the organizers' doctrine —
   CatBoost on relationship features, with four physically-motivated rules
   (duplicate logging, impossible readings, thermometer dropout, inter-sensor
   disagreement) as an explainability layer.
-- **Task 2** — physics-informed hybrid: `Ref ~ I + I² + Ambient + V + t`
-  (Joule heating, OLS) carries the extrapolatable physics; a 5-seed bagged
-  CatBoost learns only the bounded residual correction. Deliberately
-  **sensor-free** — sensors are exactly what breaks in invalid records, so
-  predictions are corruption-immune.
+- **Task 2** — physics-informed hybrid: an additive cubic Ridge base (Joule
+  heating, each operating input to powers 1–3) carries the extrapolatable
+  physics; a 5-seed bagged CatBoost learns only the bounded residual
+  correction. Deliberately **sensor-free** — sensors are exactly what breaks
+  in invalid records, so predictions are corruption-immune (verified:
+  blanking all sensors reproduces every prediction bit-identically).
 - **Task 3** — programmatic summary; the 3 attention IDs are the highest-risk
   valid tests the model is least confident about.
 

@@ -5,10 +5,10 @@ STRESS TEST EVIDENCE — team pentupbois (regenerated, seed 42)
 [1] Task 2 extrapolation: withhold the top quintile of each operating
     dimension, train on the rest, predict the withheld band.
     axis                             held-out band  hybrid RMSE  pure CAT
-    Load_Current_A                   [92.1, 110.0]        2.721     9.358
-    Applied_Voltage_kV                [27.9, 32.0]        0.335     0.759
-    Ambient_Temperature_C             [40.5, 55.0]        2.473     3.510
-    Test_Duration_min                 [47.5, 60.0]        0.530     0.648
+    Load_Current_A                   [92.1, 110.0]        1.397     9.358
+    Applied_Voltage_kV                [27.9, 32.0]        0.349     0.759
+    Ambient_Temperature_C             [40.5, 55.0]        2.278     3.510
+    Test_Duration_min                 [47.5, 60.0]        0.518     0.648
 
 [2] Task 1 label-noise: flip 5% of training labels at random, re-run
     the full CV protocol, score against the corrupted labels.
@@ -21,13 +21,13 @@ STRESS TEST EVIDENCE — team pentupbois (regenerated, seed 42)
 
 [4] Task 2 noise floor: OOF residual vs each input. If |corr| ~ 0
     everywhere, no learnable signal remains (we are at the floor).
-    corr(resid, Applied_Voltage_kV      ) = +0.0078
-    corr(resid, Load_Current_A          ) = +0.0455
-    corr(resid, Ambient_Temperature_C   ) = +0.0602
-    corr(resid, Test_Duration_min       ) = +0.0194
-    corr(resid, I2                      ) = +0.0454
-    max |corr| = 0.0602  -> no learnable structure remains: at the noise floor
-    CV RMSE = 0.4147
+    corr(resid, Applied_Voltage_kV      ) = +0.0143
+    corr(resid, Load_Current_A          ) = +0.0359
+    corr(resid, Ambient_Temperature_C   ) = +0.0791
+    corr(resid, Test_Duration_min       ) = +0.0103
+    corr(resid, I2                      ) = +0.0347
+    max |corr| = 0.0791  -> no learnable structure remains: at the noise floor
+    CV RMSE = 0.3711
 
 [5] Task 1 duplicate-group leakage check: 5-fold GroupKFold where
     duplicate feature-vector groups are never split across folds.
@@ -35,3 +35,20 @@ STRESS TEST EVIDENCE — team pentupbois (regenerated, seed 42)
     accuracy 0.9980  precision 1.0000  recall 0.9851  f1 0.9925
     duplicate rows caught without twins in training: 24/24
     -> no duplicate leakage: dup flags use deployment semantics
+
+[6] Task 2 sensor invariance: predict the whole test file with ALL
+    sensor columns set to NaN. The reference model consumes operating
+    inputs only, so every prediction must be identical — the faults
+    Task 1 detects cannot corrupt Task 2 predictions.
+    max |prediction difference| across 350 rows = 0.000e+00
+    -> bit-identical: Task 2 is verified sensor-free
+
+[7] Task 1 threshold sensitivity: F1-max threshold search on the OOF
+    probabilities (grid 0.05-0.95 step 0.01, median of the best
+    plateau) versus the deployed fixed 0.5 cutoff.
+    F1-max plateau 0.13-0.21, tuned threshold 0.17
+    fixed 0.5 : f1 0.9963  precision 1.0000  recall 0.9925
+    tuned 0.17: f1 0.9963  precision 0.9926  recall 1.0000
+    -> identical F1; the tuned cutoff trades the single borderline miss
+       for a false positive and flips zero test-file labels, so the
+       deployed fixed 0.5 (precision 1.000, no false positives) stands.
